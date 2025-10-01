@@ -6,9 +6,6 @@ Pipeline completa per face recognition con:
 - Valutazione con **ROC/AUC/EER**
 - **Webcam demo** con overlay pipeline, top-K, **enrollment persistente** e salvataggio dell’indice
 - Supporto **Windows**, **Linux/WSL**, CPU
-
-> ⚠️ Nota: `openvino.runtime` è deprecato dai rilasci 2026.0. In futuro migrare a `import openvino as ov`.
-
 ---
 
 
