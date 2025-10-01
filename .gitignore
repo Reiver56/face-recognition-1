@@ -1,0 +1,15 @@
+data/raw/
+data/enroll/
+data/index/*.npz
+public/
+intel/
+*.npz
+*.bin
+*.xml
+*.onnx
+*.jpg
+*.png
+.venv/
+.vscode/
+path
+*.ini

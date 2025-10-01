@@ -1,0 +1,11 @@
+{
+  "xml": "public/face-recognition-resnet100-arcface-onnx/FP32/face-recognition-resnet100-arcface-onnx.xml",
+  "preproc": "raw255",
+  "swaprb": false,
+  "input_size": [112, 112],
+  "thresholds": {
+    "default": 0.30,
+    "fpr_1e-3": 0.2710,
+    "fpr_1e-4": 0.3674
+  }
+}
