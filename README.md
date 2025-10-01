@@ -125,25 +125,3 @@ q → Quit (se autosave abilitato, salva prima di uscire)
 a → abilita/disabilita align 5-point
 
 p → screenshot finestra
-
-Persistenza
-
-Scrive l’indice in modo robusto (file temporaneo + replace atomico) e aggiorna data/index/latest_index.json per riaprire sempre l’ultimo indice valido.
-
-Troubleshooting
-
-OpenCV GUI error (GTK/Windows)
-Installa le librerie GUI (Linux): sudo apt install libgtk-3-dev e reinstalla opencv-python.
-Su Windows usa PowerShell e lancia senza backticks UNIX.
-
-Webcam non si apre / WSL
-Su WSL la webcam spesso non è disponibile. Esegui su Windows nativo o passa un file video con --source path.mp4.
-
-Indice NPZ vuoto / corrotto
-Il salvataggio ora è atomico. Se un file è 0 bytes, il loader salterà automaticamente al successivo valido e mostrerà un warning. Puoi verificare con:
-
-python scripts/check_npz.py data/index/lfw_plus_me.npz
-
-
-Prestazioni ricerca lente con gallerie grandi
-Valuta FAISS/ANN (fuori dallo scope di questo progetto).
