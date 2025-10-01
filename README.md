@@ -11,29 +11,6 @@ Pipeline completa per face recognition con:
 
 ---
 
-## Struttura repo
-
-face-recognition-1/
-├─ src/
-│ ├─ arcface_ov.py # wrapper OpenVINO ArcFace (embedding)
-│ └─ eval_verify_openvino.py # valutazione AUC/EER su dataset allineato
-├─ tools/
-│ ├─ align_dataset_omz.py # face align (detection+landmarks OMZ)
-│ └─ build_gallery.py # costruisce galleria (.npz)
-├─ demo/
-│ └─ webcam_identify_ui.py # demo webcam + pipeline + enroll persistente
-├─ configs/
-│ └─ arcface_openvino.json # config del modello (xml, preproc, swaprb, thresholds)
-├─ public/ # modelli ov/xml (facoltativo, o metti path esterni)
-├─ data/
-│ ├─ raw/ # dataset grezzi (es. lfw/)
-│ ├─ aligned/ # dataset allineati (112x112)
-│ ├─ index/ # indici .npz (gallery) + latest_index.json
-│ └─ enroll/ # immagini enrollment da webcam
-├─ requirements.txt
-├─ .gitignore
-├─ .gitattributes
-└─ README.md
 
 
 ---
@@ -52,18 +29,18 @@ python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip wheel
 pip install -r requirements.txt
-
+```
 Installazione (Windows PowerShell):
-
+```
 python -m venv myvenv
 myvenv\Scripts\Activate.ps1
 pip install --upgrade pip wheel
 pip install -r requirements.txt
-
+```
 Modelli
 
 Scarica (Open Model Zoo o bundle tuo) e imposta i path in configs/arcface_openvino.json, es.:
-
+```
 {
   "xml": "public/face-recognition-resnet100-arcface-onnx/FP32/face-recognition-resnet100-arcface-onnx.xml",
   "preproc": "raw255",
@@ -71,28 +48,30 @@ Scarica (Open Model Zoo o bundle tuo) e imposta i path in configs/arcface_openvi
   "thresholds": { "default": 0.30 }
 }
 
-
+```
 Detector: intel/face-detection-retail-0004
 Landmarks: intel/landmarks-regression-retail-0009
 
-1) Allineamento dataset
+Allineamento dataset
 
 Se parti da immagini grezze:
-
+```
 python tools/align_dataset_omz.py \
   --det-xml intel/face-detection-retail-0004/FP32/face-detection-retail-0004.xml \
   --lmk-xml intel/landmarks-regression-retail-0009/FP32/landmarks-regression-retail-0009.xml \
   --src data/raw/lfw \
   --dst data/aligned/lfw
 
-
+```
 Output: cartelle data/aligned/<dataset>/<identity>/*.jpg 112×112.
 
-2) Costruzione gallery (.npz)
+Costruzione gallery (.npz)
+```
 python tools/build_gallery.py \
   --config configs/arcface_openvino.json \
   --root data/aligned/lfw \
   --out data/index/lfw_arcface_raw255_bgr.npz
+```
 
 
 Output:
@@ -103,16 +82,18 @@ labels (N oggetti)
 
 paths (N path)
 
-3) Valutazione (AUC/EER)
+Valutazione (AUC/EER)
+```
 python src/eval_verify_openvino.py \
   --xml public/face-recognition-resnet100-arcface-onnx/FP32/face-recognition-resnet100-arcface-onnx.xml \
   --pairs 60000 --swaprb 0 --preproc raw255 --split lfw
-
+```
 
 Stampa AUC, EER, soglia a EER, TPR@FPR target.
 
-4) Demo Webcam + Enrollment
+Demo Webcam + Enrollment
 Windows (PowerShell)
+```
 python demo\webcam_identify_ui.py `
   --config configs\arcface_openvino.json `
   --index data\index\lfw_arcface_raw255_bgr.npz `
@@ -121,8 +102,9 @@ python demo\webcam_identify_ui.py `
   --tau 0.30 --topk 5 --source 0 `
   --enroll-dir data\enroll --enroll-name Matteo `
   --index-save data\index\lfw_plus_me.npz
-
+```
 Linux
+```
 python demo/webcam_identify_ui.py \
   --config configs/arcface_openvino.json \
   --index data/index/lfw_arcface_raw255_bgr.npz \
@@ -131,7 +113,7 @@ python demo/webcam_identify_ui.py \
   --tau 0.30 --topk 5 --source 0 \
   --enroll-dir data/enroll --enroll-name Matteo \
   --index-save data/index/lfw_plus_me.npz
-
+```
 
 Tasti utili
 
