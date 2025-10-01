@@ -120,7 +120,7 @@ s → Save manuale dell’indice (--index-save o sovrascrive l’indice caricato
 
 q → Quit (se autosave abilitato, salva prima di uscire)
 
-+ / - → cambia soglia τ
+'+' / '-' → cambia soglia τ
 
 a → abilita/disabilita align 5-point
 
