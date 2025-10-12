@@ -29,7 +29,7 @@ myvenv\Scripts\activate
 source myvenv/bin/activate
 
 pip install -r requirements.txt
-
+```
 # Modelli
 
 Scarica (Open Model Zoo o bundle tuo) e imposta i path in configs/arcface_openvino.json, es.:
