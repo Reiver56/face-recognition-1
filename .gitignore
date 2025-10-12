@@ -1,15 +1,33 @@
-data/raw/
-data/enroll/
-data/index/*.npz
-public/
-intel/
-*.npz
-*.bin
-*.xml
-*.onnx
-*.jpg
-*.png
+# Python / venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
 .venv/
+venv/
+env/
+myvenv/
+
+# IDE
 .vscode/
-path
-*.ini
+.idea/
+*.code-workspace
+
+# Dati e output locali
+data/index/*.npz
+data/index/latest_index.json
+data/enroll/
+data/aligned/**/
+data/raw/
+outputs/
+logs/
+
+# Notebook/plot cache
+.ipynb_checkpoints/
+*.png
+*.jpg
+
+# Sistema
+.DS_Store
+Thumbs.db
