@@ -12,29 +12,25 @@ Pipeline completa per face recognition con:
 
 ---
 
+# Face Recognition (OpenVINO + ArcFace)
+
+Demo di riconoscimento facciale in tempo reale con OpenVINO:
+pipeline: **Detect → Landmarks → Align → Embedding → Search (Top-K)**
+
 ## Requisiti
-
-- Python 3.10–3.12 consigliato
-- CPU x86_64
-- OpenVINO Runtime
-- OpenCV
-
-Installazione (Linux/macOS):
+- Python 3.10–3.12
+- OpenVINO, OpenCV, NumPy, scikit-learn
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip wheel
-pip install -r requirements.txt
-```
-Installazione (Windows PowerShell):
-```
 python -m venv myvenv
-myvenv\Scripts\Activate.ps1
-pip install --upgrade pip wheel
+# Windows
+myvenv\Scripts\activate
+# Linux/Mac
+source myvenv/bin/activate
+
 pip install -r requirements.txt
-```
-Modelli
+
+# Modelli
 
 Scarica (Open Model Zoo o bundle tuo) e imposta i path in configs/arcface_openvino.json, es.:
 ```
