@@ -30,21 +30,16 @@ source myvenv/bin/activate
 
 pip install -r requirements.txt
 ```
-# Modelli
-
-Scarica (Open Model Zoo o bundle tuo) e imposta i path in configs/arcface_openvino.json, es.:
-```
-{
-  "xml": "public/face-recognition-resnet100-arcface-onnx/FP32/face-recognition-resnet100-arcface-onnx.xml",
-  "preproc": "raw255",
-  "swaprb": false,
-  "thresholds": { "default": 0.30 }
-}
-
+# Modelli & Dati
 ```
 Detector: intel/face-detection-retail-0004
+
 Landmarks: intel/landmarks-regression-retail-0009
 
+Embedding: public/face-recognition-resnet100-arcface-onnx/FP32/*.xml
+
+Dataset LFW allineato in data/aligned/lfw/ (opzionale ma consigliato)
+```
 Allineamento dataset
 
 Se parti da immagini grezze:
