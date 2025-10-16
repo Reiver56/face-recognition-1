@@ -22,6 +22,9 @@ data/aligned/**/
 data/raw/
 outputs/
 logs/
+intel/
+models/
+public/
 
 # Notebook/plot cache
 .ipynb_checkpoints/
