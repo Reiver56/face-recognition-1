@@ -17,7 +17,7 @@ python demo\webcam_identify_ui.py ^
   --index %IDX% ^
   --det-xml %DET% ^
   --lmk-xml %LMK% ^
-  --tau 0.30 --topk 5 --source 0 ^
+  --tau 0.60 --topk 5 --source 0 ^
   --enroll-dir %ENR% --enroll-name %NAME% ^
   --index-save %SAVE%
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import argparse, json, sys, time, os, atexit, tempfile
+import argparse, json, sys, time, os, atexit, tempfile, stat
 from pathlib import Path
 from collections import deque
 from datetime import datetime, timezone
@@ -200,9 +200,9 @@ def align_by_5p(img_bgr: np.ndarray, pts5_abs: np.ndarray, size=(112,112)):
         return cv2.resize(img_bgr, size)
     return cv2.warpAffine(img_bgr, M, size, flags=cv2.INTER_LINEAR)
 
-def cosine_matrix(q: np.ndarray, E: np.ndarray) -> np.ndarray:
-    q = q.reshape(1, -1).astype(np.float32)
-    return (E @ q.T).ravel() / ((np.linalg.norm(E,axis=1)*np.linalg.norm(q))+1e-12)
+def normalize_rows(M: np.ndarray) -> np.ndarray:
+    n = np.linalg.norm(M, axis=1, keepdims=True) + 1e-12
+    return M / n
 
 # ------------------ capture helpers ------------------
 def parse_source(src_str: str):
@@ -256,6 +256,8 @@ def main():
     ap.add_argument("--enroll-dir", default="")
     ap.add_argument("--enroll-name", default="Me")
     ap.add_argument("--index-save", default="")
+    ap.add_argument("--detect-interval", type=int, default=1,
+                    help="esegui detection ogni N frame, riusa le box negli altri (default 1 = sempre)")
     ap.add_argument("--no-autosave", action="store_true",
                     help="non salvare automaticamente su uscita")
     args = ap.parse_args()
@@ -299,7 +301,6 @@ def main():
             loaded = np.load(str(user_index), allow_pickle=True)
         except Exception as e:
             print(f"[warn] failed to load index '{user_index}': {e}")
-            # scan other npz in same dir
             cand_files = sorted(list(user_index.parent.glob("*.npz")), key=lambda p: p.stat().st_mtime, reverse=True)
             for c in cand_files:
                 if c.resolve() == user_index.resolve(): continue
@@ -318,34 +319,91 @@ def main():
     labels = data["labels"].astype(object)
     paths = data["paths"].astype(object)
 
-    # save_path (if --index-save provided use it, else overwrite loaded file)
+    # ---- gallery normalizzata per cosine veloce
+    En = normalize_rows(E)
+
+    def search_cosine_fast(q: np.ndarray) -> np.ndarray:
+        qn = q.astype(np.float32)
+        qn /= (np.linalg.norm(qn) + 1e-12)
+        return En @ qn  # (N,)
+
+    # save_path
     save_path = Path(args.index_save) if args.index_save else Path(index_to_load)
     gallery_dirty = False
 
     def do_save():
-        """Salva l'indice in modo robusto (tmp + os.replace) e aggiorna latest_index.json."""
+        """Salva l'indice in modo robusto (tmp + fsync + retry replace) e aggiorna latest_index.json."""
         nonlocal gallery_dirty, E, labels, paths, save_path
         if not gallery_dirty:
             print("[save] nulla da salvare.")
             return
+
         save_path.parent.mkdir(parents=True, exist_ok=True)
-        # tmp nello stesso folder per atomic replace
-        fd, tmp_path = tempfile.mkstemp(prefix=save_path.stem + "_", suffix=save_path.suffix + ".tmp",
+
+        # crea tmp nello stesso folder
+        fd, tmp_path = tempfile.mkstemp(prefix=save_path.stem + "_",
+                                        suffix=save_path.suffix + ".tmp",
                                         dir=str(save_path.parent))
         os.close(fd)
         try:
-            np.savez_compressed(str(tmp_path), embeddings=E, labels=labels, paths=paths)
+            # scrivi + flush + fsync
+            with open(tmp_path, "wb") as fh:
+                np.savez_compressed(fh, embeddings=E, labels=labels, paths=paths)
+                fh.flush()
+                os.fsync(fh.fileno())
+
             if os.path.getsize(tmp_path) == 0:
                 raise RuntimeError("file temporaneo vuoto, salvataggio fallito")
-            os.replace(tmp_path, save_path)
-            print(f"[save] index aggiornato -> {save_path} (entries={E.shape[0]})")
+
+            # replace robusto con retry/backoff e fallback
+            abs_save = save_path.resolve()
+            tmp_path = Path(tmp_path).resolve()
+
+            def _make_writable(p: Path):
+                try:
+                    if p.exists():
+                        os.chmod(str(p), stat.S_IWRITE | stat.S_IREAD)
+                except Exception:
+                    pass
+
+            _make_writable(abs_save)
+
+            attempts, delay = 5, 0.35
+            replaced = False
+            last_exc = None
+            for _ in range(attempts):
+                try:
+                    os.replace(str(tmp_path), str(abs_save))
+                    replaced = True
+                    break
+                except (PermissionError, OSError) as e:
+                    last_exc = e
+                    time.sleep(delay)
+
+            if not replaced:
+                ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+                fallback = abs_save.with_name(abs_save.stem + f"_{ts}.npz")
+                try:
+                    os.replace(str(tmp_path), str(fallback))
+                    print(f"[save][WARN] replace lockato su {abs_save.name} ({last_exc}). "
+                          f"Salvato come {fallback.name} e aggiornato manifest.")
+                    abs_save = fallback
+                except Exception as e2:
+                    try:
+                        if tmp_path.exists(): tmp_path.unlink()
+                    except Exception:
+                        pass
+                    raise RuntimeError(f"[save][ERROR] replace fallito e fallback non riuscito: {e2}") from last_exc
+
             gallery_dirty = False
-            # manifest
-            manifest_file = save_path.parent / "latest_index.json"
-            mfd, mtmp = tempfile.mkstemp(prefix="latest_index_", suffix=".tmp", dir=str(save_path.parent))
+            print(f"[save] index aggiornato -> {abs_save} (entries={E.shape[0]})")
+
+            # manifest robusto
+            manifest_file = abs_save.parent / "latest_index.json"
+            mfd, mtmp = tempfile.mkstemp(prefix="latest_index_", suffix=".tmp", dir=str(abs_save.parent))
             os.close(mfd)
             meta = {
-                "last": save_path.name,
+                "last": abs_save.name,
                 "entries": int(E.shape[0]),
                 "saved_at": datetime.now(timezone.utc).isoformat()
             }
@@ -353,10 +411,12 @@ def main():
                 json.dump(meta, fh)
                 fh.flush(); os.fsync(fh.fileno())
             os.replace(mtmp, manifest_file)
+
         except Exception as e:
             print(f"[save][ERROR] fallito: {e}")
             try:
-                if os.path.exists(tmp_path): os.unlink(tmp_path)
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
             except Exception:
                 pass
 
@@ -381,6 +441,11 @@ def main():
     frame_id = 0
     best_crop = best_emb = best_top = None
 
+    # detection skip state
+    detect_interval = max(1, int(args.detect_interval))
+    last_boxes = []
+    last_detect_frame = -999
+
     while True:
         t0 = time.perf_counter()
         ok, frame = cap.read()
@@ -401,10 +466,16 @@ def main():
 
         panel = mk_panel(right_w, H)
 
-        # Detect
-        td0 = time.perf_counter()
-        boxes = detect_fd_ret04(det, frame, conf_thr=0.6)
-        td = (time.perf_counter()-td0)*1000
+        # Detect (con skip)
+        td = 0.0
+        if (frame_id - last_detect_frame) >= detect_interval or len(last_boxes) == 0:
+            td0 = time.perf_counter()
+            boxes = detect_fd_ret04(det, frame, conf_thr=0.6)
+            td = (time.perf_counter()-td0)*1000
+            last_boxes = boxes
+            last_detect_frame = frame_id
+        else:
+            boxes = last_boxes  # riuso
 
         t_lmk = t_align = t_emb = t_srch = 0.0
         best_face_for_panel = None
@@ -428,7 +499,7 @@ def main():
             t_emb += (time.perf_counter()-te0)*1000
 
             ts0 = time.perf_counter()
-            s = cosine_matrix(f, E)
+            s = search_cosine_fast(f)  # (N,)
             idx = int(np.argmax(s)); smax = float(s[idx]); lab = str(labels[idx])
             order = np.argsort(-s)[:args.topk]
             top = [(float(s[i]), str(labels[i]), str(paths[i])) for i in order]
@@ -501,7 +572,7 @@ def main():
                 gallery_dirty = True
                 do_save()
             elif key == ord('e'):
-                if best_crop is None or best_emb is None:
+                if best_crop is None:
                     print("[enroll] nessun volto nel frame.")
                 else:
                     path_str = f"enroll_{args.enroll_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
@@ -514,14 +585,15 @@ def main():
                     else:
                         path_to_store = path_str
 
-                    E = np.vstack([E, best_emb.reshape(1, -1).astype(np.float32)])
+                    new_emb = best_emb.reshape(1, -1).astype(np.float32)
+                    E = np.vstack([E, new_emb])
                     labels = np.append(labels, np.array([args.enroll_name], dtype=object))
-                    paths = np.append(paths, np.array([path_to_store], dtype=object))
+                    paths  = np.append(paths,  np.array([path_to_store], dtype=object))
+                    En = normalize_rows(E)
                     print(f"[enroll] aggiunto '{args.enroll_name}' ({path_to_store}); gallery={E.shape[0]}")
                     gallery_dirty = True
-                    do_save()  # autosave immediato
+                    do_save()
             elif key == ord('d'):
-                # delete: nome specifico o ultimo
                 try:
                     target = input("Nome da cancellare (vuoto = ultimo): ").strip()
                     if target:
@@ -530,6 +602,7 @@ def main():
                             E = np.delete(E, idxs, axis=0)
                             labels = np.delete(labels, idxs, axis=0)
                             paths = np.delete(paths, idxs, axis=0)
+                            En = normalize_rows(E)
                             print(f"[delete] rimossi {len(idxs)} esempi di '{target}'")
                             gallery_dirty = True
                             do_save()
@@ -538,9 +611,8 @@ def main():
                     else:
                         if len(labels) > 0:
                             print(f"[delete] rimosso ultimo: {labels[-1]} ({paths[-1]})")
-                            E = E[:-1]
-                            labels = labels[:-1]
-                            paths = paths[:-1]
+                            E = E[:-1]; labels = labels[:-1]; paths = paths[:-1]
+                            En = normalize_rows(E)
                             gallery_dirty = True
                             do_save()
                         else:
