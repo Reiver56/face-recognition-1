@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 stages = ["Detect", "Landmarks", "Align", "Embed", "Search"]
-times_ms = [3.2, 0.5, 0.2, 120.4, 1.1] 
+times_ms = [3.2, 0.5, 0.1, 78.4, 1.5] 
 
 plt.figure(figsize=(7,4))
 plt.bar(stages, times_ms, color='cornflowerblue')
