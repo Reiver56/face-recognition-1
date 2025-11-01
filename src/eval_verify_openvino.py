@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Valutazione di ArcFace + OpenVINO (verification mode)
 Supporta:
@@ -22,8 +19,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import metrics
 import cv2
-
-# importa ArcFaceOV dal tuo progetto
 from arcface_ov import ArcFaceOV
 
 

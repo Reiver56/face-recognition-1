@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import argparse, json, sys, time, os, atexit, tempfile, stat
 from pathlib import Path
 from collections import deque
@@ -273,7 +270,6 @@ def main():
     lmk_model = None if args.no_align else OVModel(args.lmk_xml)
     align_enabled = (not args.no_align)
 
-    # --- index loading with manifest support and robust fallbacks ---
     user_index = Path(args.index)
     manifest = user_index.parent / "latest_index.json"
     index_to_load = user_index
@@ -340,7 +336,7 @@ def main():
 
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # crea tmp nello stesso folder
+        # crea tmp nella stessa cartella
         fd, tmp_path = tempfile.mkstemp(prefix=save_path.stem + "_",
                                         suffix=save_path.suffix + ".tmp",
                                         dir=str(save_path.parent))

@@ -1,13 +1,12 @@
-#!/usr/bin/env python3
 import argparse, sys, json
 from pathlib import Path
 import numpy as np
 import cv2
 
-# permetti "from src.arcface_ov import ArcFaceOV"
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(ROOT / "src"))
-from arcface_ov import ArcFaceOV  # già creato prima
+from arcface_ov import ArcFaceOV  
 
 def iter_images_labeled(root: Path):
     """

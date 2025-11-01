@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Genera pairs_auto.txt per LFW in formato:
   - 3 token: "ID fileA.jpg fileB.jpg"  (positivi)

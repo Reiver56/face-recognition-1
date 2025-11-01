@@ -38,7 +38,7 @@ Landmarks: intel/landmarks-regression-retail-0009
 
 Embedding: public/face-recognition-resnet100-arcface-onnx/FP32/*.xml
 
-Dataset LFW allineato in data/aligned/lfw/ (opzionale ma consigliato)
+Dataset LFW allineato in data/aligned/lfw/
 ```
 Allineamento dataset
 

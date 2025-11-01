@@ -1,4 +1,3 @@
-# src/arcface_ov.py
 from pathlib import Path
 import numpy as np
 import cv2
